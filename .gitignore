@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Temporary Word files
+~$*.docx
+
+# R session files
+.Rhistory
+.RData
+.Ruserdata
+
+# RStudio
+.Rproj.user/
+
+# R Markdown cache
+*_cache/
+*.Rmd_cache/

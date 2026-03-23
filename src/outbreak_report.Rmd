@@ -1,0 +1,474 @@
+---
+title: "SPH2002 Outbreak Investigation"
+author: "T3_Group3"
+output:
+  word_document:
+    toc: false
+    reference_docx: ../utils/format.docx
+params:
+    group: "T3G2"
+    show_code: FALSE
+---
+
+```{r setup, include=FALSE}
+### Knit Settings
+knitr::opts_chunk$set(
+  echo = params$show_code,
+  message = FALSE,
+  warning = FALSE
+)
+
+### Libraries
+packages = c("tidyverse", "lubridate", "knitr", "flextable")
+installed = packages %in% rownames(installed.packages())
+if (any(!installed)) {install.packages(packages[!installed])}
+lapply(packages, library, character.only = TRUE)
+```
+
+<br>
+
+```{r}
+front_table = tibble(
+    `No.` = 1:6, 
+    `Student MATRIC Numbers` = c(
+        "A0192401R",
+        "A2222222B",
+        "A3333333C",
+        "A4444444D",
+        "A5555555E",
+        "A6666666F"
+        )
+    )
+
+flextable(front_table) %>%
+    bold(part = "header") %>%
+    align(align = "center", part = "all") %>%
+    border_outer(border = officer::fp_border(color = "black", width = 1)) %>%
+    border_inner_h(border = officer::fp_border(color = "black", width = 0.5)) %>%
+    border_inner_v(border = officer::fp_border(color = "black", width = 0.5)) %>%
+    bg(bg = "white", part = "all") %>%
+    font(fontname = "Times New Roman", part = "all") %>%
+    fontsize(size = 12, part = "all") %>%
+    autofit()
+```
+
+\newpage
+
+```{r}
+### Dataset
+# Construct dataset filename based on group parameter
+filename = paste0("sph2002_obdataset_group_", params$group, ".csv")
+
+# Import and clean dataset
+df = read.csv(file.path("..", "data", filename)) %>%
+    # Fix typo for "cesar_salad"
+    rename(caesar_salad = cesar_salad) %>%
+    mutate(
+        # Recode 8 to NA in food variables
+        across(
+            caesar_salad:chocolate_fondue,
+            ~ na_if(., 8)
+        ),
+        # Parse datetime variables
+        # Note: 5 non-cases (IDs 48, 101, 154, 207, 260), missing illness_end_time is assumed as 00:00:00
+        across(
+            c(ate_start, illness_start_time, illness_end_time),
+            ~ parse_date_time(.x, orders = c("ymd HMS", "ymd"), tz = "Asia/Singapore")
+        ),
+        # Fix typo for "Sinagpore"
+        residency_status = case_when(
+            residency_status == "Sinagpore" ~ "Singapore",
+            TRUE ~ residency_status
+        )
+    )
+```
+
+# Section 1: Descriptive epidemiology (13 marks)
+
+## 1. Summarize the characteristics of the population including age, sex, residency status and participant role in the conference, in a short paragraph. (5 marks)
+
+```{r}
+# Sample size
+n = nrow(df)
+
+# Age
+age_min = min(df$age, na.rm = TRUE)
+age_q1 = quantile(df$age, 0.25, na.rm = TRUE)
+age_med = median(df$age, na.rm = TRUE)
+age_q3 = quantile(df$age, 0.75, na.rm = TRUE)
+age_max = max(df$age, na.rm = TRUE)
+
+# Sex
+sex_tab = table(df$sex)
+sex_prop = prop.table(sex_tab)
+male_n = sex_tab["Male"]
+male_pct = round(100 * sex_prop["Male"], 1)
+female_n = sex_tab["Female"]
+female_pct = round(100 * sex_prop["Female"], 1)
+
+# Residency
+res_tab = table(df$residency_status)
+res_prop = prop.table(res_tab)
+overseas_n = res_tab["Overseas"]
+overseas_pct = round(100 * res_prop["Overseas"], 1)
+sg_n = res_tab["Singapore"]
+sg_pct = round(100 * res_prop["Singapore"], 1)
+
+# Role
+role_tab = table(df$participant_role)
+role_prop = prop.table(role_tab)
+delegate_n = role_tab["Delegate"]
+delegate_pct = round(100 * role_prop["Delegate"], 1)
+presenter_n = role_tab["Presenter"]
+presenter_pct = round(100 * role_prop["Presenter"], 1)
+```
+
+The study population consisted of **`r n` participants**. The median age was **`r age_med` years** (IQR: **`r age_q1` - `r age_q3`**), with a range from **`r age_min` to `r age_max`**. The majority were **male (`r male_n`, `r male_pct`%)**, while the remaining **`r female_n` (`r female_pct`%) were female**. Participants were almost evenly split between **overseas (`r overseas_n`, `r overseas_pct`%)** and **Singapore residents (`r sg_n`, `r sg_pct`%)**. Majority of the participants were **delegates (`r delegate_n`, `r delegate_pct`%)**, while the remaining **`r presenter_n` (`r presenter_pct`%) were presenters**.
+
+## 2. Construct a table summarizing the frequency and percentage of symptoms reported by participants who experienced at least one symptom. Arrange the symptoms in descending order of frequency. Show your calculations in the analysis output. (5 marks)
+
+<br>
+
+```{r}
+# Symptoms of interest
+symptoms = c("vomit", "diarr", "abdopain", "fever", "nausea", "appetite")
+
+# Number of participants reporting at least one symptom
+n_symp = df %>% filter(if_any(all_of(symptoms), ~ .x == 1)) %>% nrow()
+
+# Summarise frequency and percentage of each symptom among symptomatic participants
+qn2_df = df %>%
+    filter(if_any(all_of(symptoms), ~ .x == 1)) %>%
+    summarise(across(all_of(symptoms), ~ sum(.x == 1, na.rm = TRUE))) %>%
+    pivot_longer(
+        everything(),
+        names_to = "symptom",
+        values_to = "frequency") %>%
+    mutate(percentage = round(100 * frequency / n_symp, 1)) %>%
+    arrange(desc(frequency))
+
+# Create table for presentation
+qn2_table = qn2_df %>%
+    mutate(
+        symptom = case_when(
+            symptom == "diarr" ~ "Diarrhoea",
+            symptom == "abdopain" ~ "Abdominal pain",
+            symptom == "fever" ~ "Fever",
+            symptom == "vomit" ~ "Vomiting",
+            symptom == "appetite" ~ "Loss of appetite",
+            symptom == "nausea" ~ "Nausea",
+            TRUE ~ symptom
+        )
+    ) %>%
+    rename(
+        Symptom = symptom,
+        Frequency = frequency,
+        `Percentage (%)` = percentage
+    )
+
+flextable(qn2_table) %>% 
+    bg(i = seq(2, nrow(qn2_table), by = 2), bg = "#F9F9F9", part = "body") %>%
+    bold(part = "header") %>%
+    font(fontname = "Times New Roman", part = "all") %>%
+    fontsize(size = 12, part = "all") %>%
+    set_caption(paste0("Symptomatic participants (n = ", n_symp, ")")) %>%
+    autofit() 
+```
+
+<br>
+
+## 3. In Singapore, the background rate of foodborne illness is typically less than 1%. Based on your analysis above, evaluate whether the observed illness among conference participants is likely to represent an outbreak. Provide justification for your conclusion.  (3 marks)
+
+```{r}
+n_total = nrow(df)                   # Total number of participants
+symp_rate = n_symp / n_total         # Proportion of symptomatics
+symp_pct = round(100 * symp_rate, 1) # Proportion in %
+```
+
+The proportion of participants reporting at least one symptom was **`r symp_pct`% (`r n_symp` out of `r n_total`)**, which greatly exceeds the background rate of foodborne illness in Singapore (<1%). Therefore, this finding strongly suggests that an outbreak has occurred among conference participants.
+
+\newpage
+
+# Section 2: Developing the case definition (22 marks)
+
+## 4. Propose a suitable case definition for this outbreak. (6 marks)
+
+[To be completed]
+
+## 5. What are the benefits and challenges of using a case definition that is too broad or too narrow during an outbreak investigation? How might this impact the outcome of the investigation? (4 marks)
+
+[To be completed]
+
+## 6. Describe two strategies public health investigators can implement to effectively balance between rapid outbreak response and accurate determination of the outbreak source when using a working case definition. (4 marks)
+
+[To be completed]
+
+## 7. Using the pre-determined case definition, calculate the attack rate among the conference  attendees. Show your calculation and present your final answer as a percentage. (2 marks)
+
+```{r}
+n_total = nrow(df)                          # Total number of participants
+n_cases = sum(df$case == 1, na.rm = TRUE)   # Total number of cases
+attack_rate = n_cases / n_total             # Attack rate
+attack_pct = round(100 * attack_rate, 1)    # Attack rate in %
+```
+
+Number of cases = `r n_cases`  
+Total number of attendees = `r n_total`  
+Attack rate = (`r n_cases` / `r n_total`) × 100 = **`r attack_pct`%**
+
+## 8. What were the minimum, median and maximum durations of illness (in days) among the cases?  Show your calculations in the analysis output. (3 marks)
+
+```{r}
+# Subset to cases only
+qn8_df = df %>%
+    filter(case == 1) %>%
+    mutate(duration_days = as.numeric(illness_end_time - illness_start_time, units = "days"))
+
+# Calculate summary statistics for duration of illness
+dur_min = min(qn8_df$duration_days, na.rm = TRUE)     # Minimum duration
+dur_med = median(qn8_df$duration_days, na.rm = TRUE)  # Median duration
+dur_max = max(qn8_df$duration_days, na.rm = TRUE)     # Maximum duration
+```
+
+Minimum duration = **`r sprintf("%.2f", dur_min)` days**  
+Median duration = **`r sprintf("%.2f", dur_med)` days**  
+Maximum duration = **`r sprintf("%.2f", dur_max)` days**
+
+## 9. What were the minimum, maximum, and median incubation periods (in days) among cases? Show your calculations in the analysis output. (3 marks)
+
+```{r}
+# Subset to cases only
+qn9_df = df %>%
+    filter(case == 1) %>%
+    mutate(incubation_days = as.numeric(illness_start_time - ate_start, units = "days"))
+
+inc_min = min(qn9_df$incubation_days, na.rm = T)     # Minimum incubation
+inc_med = median(qn9_df$incubation_days, na.rm = T)  # Median incubation
+inc_max = max(qn9_df$incubation_days, na.rm = T)     # Maximum incubation
+```
+
+Minimum incubation period = **`r sprintf("%.2f", inc_min)` days**  
+Median incubation period = **`r sprintf("%.2f", inc_med)` days**  
+Maximum incubation period = **`r sprintf("%.2f", inc_max)` days**
+
+\newpage
+
+# Section 3: Epidemic curve (15 marks)
+
+## 10. Construct an epidemic curve using the dates and times of illness onset among the cases. Include your graph below. Ensure it has a title, labelled axes, and appropriate time intervals. Show how the graph was generated in the analysis output.  (12 marks)
+
+```{r dpi = 300}
+# Define time interval for grouping onset times
+hour_interval = 6
+
+# Aggregate number of cases by time interval of illness onset
+df_epi_count = df %>%
+    filter(case == 1, !is.na(illness_start_time)) %>%
+    mutate(
+        onset_bin = floor_date(illness_start_time, unit = "day") +
+            hours(hour_interval) * floor(hour(illness_start_time) / hour_interval),
+        onset_end = onset_bin + hours(hour_interval),
+        interval_label = paste0(
+            format(onset_bin, "%b %d\n%H:%M")," - ",
+            format(onset_end, "%H:%M"))) %>%
+    count(onset_bin, interval_label)
+
+# Plot epidemic curve
+epi_curve = ggplot(df_epi_count, aes(x = interval_label, y = n)) +
+    geom_col(fill = "skyblue", color = "black") +
+    labs(
+        title = "Epidemic Curve of Illness Onset",
+        subtitle = paste0(
+            "Among ",
+            sum(df$case == 1, na.rm = TRUE),
+            " conference cases, grouped into 6-hour intervals"
+        ),
+        x = "Time Interval of Illness Onset",
+        y = "Number of Cases"
+    ) +
+    theme_bw()
+
+# Export and display curve
+epi_curve
+```
+
+## 11. Based on your epidemic curve, what kind of outbreak does it suggest? Give reasons for your answer. (3 marks)
+
+[To be completed]
+
+\newpage
+
+# Section 4: Analytical epidemiology (21 marks)
+
+## 12. Construct a table summarising the frequency and attack rates among the exposed and unexposed groups for each food item served at the conference. (10 marks)
+
+<br>
+
+```{r}
+# Food exposure variables
+foods = df %>%
+  select(caesar_salad:chocolate_fondue) %>%
+  names()
+
+# Reshape dataset to long format with exposure status for each food item
+qn12_long = df %>%
+    mutate(row_id = row_number()) %>%
+    select(row_id, case, all_of(foods)) %>%
+    mutate(across(all_of(foods), ~ ifelse(.x %in% c(0, 1), .x, NA))) %>%
+    pivot_longer(
+        cols = all_of(foods),
+        names_to = "food",
+        values_to = "exposed")
+
+# Calculate number of participants with unknown exposure for each food item
+qn12_unknown = qn12_long %>%
+    group_by(food) %>%
+    summarise(
+        unknown_n = sum(is.na(exposed)),
+        .groups = "drop")
+
+# Compute attack rates among exposed and unexposed groups
+qn12_rates = qn12_long %>%
+    filter(!is.na(exposed)) %>%
+    group_by(food, exposed) %>%
+    summarise(
+        ill = sum(case == 1),
+        total = n(),
+        attack_rate = 100 * ill / total,
+        .groups = "drop")
+
+# Reshape results to wide format and combine with unknown exposure counts
+qn12_wide = qn12_rates %>%
+    left_join(qn12_unknown, by = "food") %>%
+    mutate(group = ifelse(exposed == 1, "Exposed", "Unexposed")) %>%
+    select(food, group, ill, total, attack_rate, unknown_n) %>%
+    pivot_wider(names_from = group, values_from = c(ill, total, attack_rate))
+
+# Create table for presentation
+qn12_table = qn12_wide %>%
+    mutate(
+        attack_rate_Exposed = round(attack_rate_Exposed, 1),
+        attack_rate_Unexposed = round(attack_rate_Unexposed, 1),
+        food = stringr::str_replace_all(food, "_", " "),
+        food = stringr::str_to_title(food)
+        ) %>%
+    select(
+        Food = food,
+        Ill_Exp = ill_Exposed,
+        Total_Exp = total_Exposed,
+        AR_Exp = attack_rate_Exposed,
+        Ill_Unexp = ill_Unexposed,
+        Total_Unexp = total_Unexposed,
+        AR_Unexp = attack_rate_Unexposed,
+        Unknown = unknown_n
+    )
+
+flextable(qn12_table) %>%
+    set_header_labels(
+        Ill_Exp = "Ill",
+        Total_Exp = "Total",
+        AR_Exp = "Attack Rate (%)",
+        Ill_Unexp = "Ill",
+        Total_Unexp = "Total",
+        AR_Unexp = "Attack Rate (%)"
+    ) %>%
+    add_header_row(
+        values = c("", "Exposed", "Unexposed", ""),
+        colwidths = c(1, 3, 3, 1)
+    ) %>%
+    vline(j = 1, border = officer::fp_border(width = 1)) %>% 
+    vline(j = 4, border = officer::fp_border(width = 1)) %>%
+    vline(j = 7, border = officer::fp_border(width = 1)) %>%
+    bg(i = seq(2, nrow(qn12_table), by = 2), bg = "#F9F9F9", part = "body") %>%
+    bold(part = "header") %>%
+    font(fontname = "Times New Roman", part = "all") %>%
+    fontsize(size = 12, part = "all") %>%
+    autofit()
+```
+
+<br>
+
+\newpage
+
+## 13. Calculate an appropriate measure of association to determine which food item was most strongly linked to the illness. Construct a table summarising the measure of association and its 95% confidence interval for each food item. Include your table below with appropriate headings and labels. Show your working in the analysis output. (7 marks)
+
+<br>
+
+```{r}
+# Significance level and z-value for 95% confidence interval
+alpha = 0.05
+z = qnorm(1 - alpha/2)
+
+# Calculate attack rates, relative risks, and 95% confidence intervals for each food item
+qn12_df = qn12_wide %>%
+    mutate(
+        ar_exp = ill_Exposed / total_Exposed,
+        ar_unexp = ill_Unexposed / total_Unexposed,
+        rr = ar_exp / ar_unexp,
+        se_log_rr = sqrt(
+            (1 / ill_Exposed) - (1 / total_Exposed) +
+            (1 / ill_Unexposed) - (1 / total_Unexposed)),
+    rr_lower = exp(log(rr) - z * se_log_rr),
+    rr_upper = exp(log(rr) + z * se_log_rr))
+
+# Create table for presentation
+qn13_table <- qn12_df %>%
+    mutate(
+        food = stringr::str_replace_all(food, "_", " "),
+        food = stringr::str_to_title(food),
+        ar_exp = sprintf("%.1f", ar_exp * 100),
+        ar_unexp = sprintf("%.1f", ar_unexp * 100),
+        rr = sprintf("%.2f", rr),
+        rr_lower = sprintf("%.2f", rr_lower),
+        rr_upper = sprintf("%.2f", rr_upper),
+        ci = paste0(rr_lower, " – ", rr_upper)
+    ) %>%
+    select(
+        Food = food,
+        `Attack Rate (%)\n(Exposed)` = ar_exp,
+        `Attack Rate (%)\n(Unexposed)` = ar_unexp,
+        `Relative Risk` = rr,
+        `95% CI` = ci
+    )
+
+flextable(qn13_table) %>% 
+    bg(i = seq(2, nrow(qn13_table), by = 2), bg = "#F9F9F9", part = "body") %>%
+    bold(part = "header") %>%
+    font(fontname = "Times New Roman", part = "all") %>%
+    fontsize(size = 12, part = "all") %>%
+    autofit()
+```
+
+<br>
+
+## 14. Write a paragraph summarizing the results of your statistical analysis. Describe which food item was most strongly associated with illness in this outbreak, and present the statistical evidence supporting this conclusion. Your interpretation should be based on the findings from Questions 12 and 13. (4 marks)
+
+[To be completed]
+
+\newpage
+
+# Section 5: Study bias and confounding (17 marks)
+
+## 15. Describe two types of bias that could have affected the outbreak investigation. For each, explain how it might impact the results and suggest a way to minimize the impact. (6 marks)
+
+[To be completed]
+
+## 16. Identify a potential confounder in this outbreak investigation. Explain how you would assess confounding and describe methods to control for confounding during data analysis. (7 marks)
+
+[To be completed]
+
+## 17. If this outbreak had been investigated using a case-control study instead of a retrospective cohort study, how would the analysis of food exposure differ? List one advantage and one limitation of each study design in the context of this outbreak. (4 marks)
+
+[To be completed]
+
+\newpage
+
+# Section 6: Identifying the etiologic agent and control measures (14 marks)
+
+## 18. Based on the information that you have compiled from your analysis, which micro-organism do you think is most likely to be responsible for this outbreak? Give 3 reasons, with explanation for your answer. (10 marks)
+
+[To be completed]
+
+## 19. Based on your investigation findings, suggest two immediate control measures to prevent further transmission of the outbreak. Identify indicators you would monitor to assess whether the control measures are effective. (4 marks)
+
+[To be completed]
