@@ -1,6 +1,6 @@
 ---
 title: "SPH2002 Outbreak Investigation"
-author: "T3_Group3"
+author: "T3 Group 2"
 output:
   word_document:
     toc: false
@@ -29,27 +29,27 @@ lapply(packages, library, character.only = TRUE)
 
 ```{r}
 front_table = tibble(
-    `No.` = 1:6, 
-    `Student MATRIC Numbers` = c(
-        "A0192401R",
-        "A2222222B",
-        "A3333333C",
-        "A4444444D",
-        "A5555555E",
-        "A6666666F"
-        )
+  `No.` = 1:6, 
+  `Student MATRIC Numbers` = c(
+    "A0192401R",
+    "",
+    "",
+    "",
+    "",
+    ""
     )
+  )
 
 flextable(front_table) %>%
-    bold(part = "header") %>%
-    align(align = "center", part = "all") %>%
-    border_outer(border = officer::fp_border(color = "black", width = 1)) %>%
-    border_inner_h(border = officer::fp_border(color = "black", width = 0.5)) %>%
-    border_inner_v(border = officer::fp_border(color = "black", width = 0.5)) %>%
-    bg(bg = "white", part = "all") %>%
-    font(fontname = "Times New Roman", part = "all") %>%
-    fontsize(size = 12, part = "all") %>%
-    autofit()
+  bold(part = "header") %>%
+  align(align = "center", part = "all") %>%
+  border_outer(border = officer::fp_border(color = "black", width = 1)) %>%
+  border_inner_h(border = officer::fp_border(color = "black", width = 0.5)) %>%
+  border_inner_v(border = officer::fp_border(color = "black", width = 0.5)) %>%
+  bg(bg = "white", part = "all") %>%
+  font(fontname = "Times New Roman", part = "all") %>%
+  fontsize(size = 12, part = "all") %>%
+  autofit()
 ```
 
 \newpage
@@ -61,26 +61,23 @@ filename = paste0("sph2002_obdataset_group_", params$group, ".csv")
 
 # Import and clean dataset
 df = read.csv(file.path("..", "data", filename)) %>%
-    # Fix typo for "cesar_salad"
-    rename(caesar_salad = cesar_salad) %>%
-    mutate(
-        # Recode 8 to NA in food variables
-        across(
-            caesar_salad:chocolate_fondue,
-            ~ na_if(., 8)
-        ),
-        # Parse datetime variables
-        # Note: 5 non-cases (IDs 48, 101, 154, 207, 260), missing illness_end_time is assumed as 00:00:00
-        across(
-            c(ate_start, illness_start_time, illness_end_time),
-            ~ parse_date_time(.x, orders = c("ymd HMS", "ymd"), tz = "Asia/Singapore")
-        ),
-        # Fix typo for "Sinagpore"
-        residency_status = case_when(
-            residency_status == "Sinagpore" ~ "Singapore",
-            TRUE ~ residency_status
-        )
-    )
+  # Fix typo for "cesar_salad"
+  rename(caesar_salad = cesar_salad) %>%
+  mutate(
+    # Recode 8 to NA in food variables
+    across(caesar_salad:chocolate_fondue, ~ na_if(., 8)),
+    
+    # Parse datetime variables
+    # - Note: For 5 non-cases (IDs 48, 101, 154, 207, 260), illness_end_time was recorded without a time component.
+    # - These were parsed as 00:00:00 by default.
+    across(
+      c(ate_start, illness_start_time, illness_end_time),
+      ~ parse_date_time(.x, orders = c("ymd HMS", "ymd"), tz = "Asia/Singapore")),
+    
+    # Fix typo for "Sinagpore"
+    residency_status = case_when(
+      residency_status == "Sinagpore" ~ "Singapore",
+      TRUE ~ residency_status))
 ```
 
 # Section 1: Descriptive epidemiology (13 marks)
@@ -123,7 +120,7 @@ presenter_n = role_tab["Presenter"]
 presenter_pct = round(100 * role_prop["Presenter"], 1)
 ```
 
-The study population consisted of **`r n` participants**. The median age was **`r age_med` years** (IQR: **`r age_q1` - `r age_q3`**), with a range from **`r age_min` to `r age_max`**. The majority were **male (`r male_n`, `r male_pct`%)**, while the remaining **`r female_n` (`r female_pct`%) were female**. Participants were almost evenly split between **overseas (`r overseas_n`, `r overseas_pct`%)** and **Singapore residents (`r sg_n`, `r sg_pct`%)**. Majority of the participants were **delegates (`r delegate_n`, `r delegate_pct`%)**, while the remaining **`r presenter_n` (`r presenter_pct`%) were presenters**.
+The study population consisted of **`r n` participants**. The median age was **`r age_med` years** (IQR: **`r age_q1` - `r age_q3`**), with a range from **`r age_min` to `r age_max` years**. **`r male_n` (`r male_pct`%) were male** and **`r female_n` (`r female_pct`%) were female**. Participants were approximately evenly distributed between **overseas (`r overseas_n`, `r overseas_pct`%)** and **Singapore residents (`r sg_n`, `r sg_pct`%)**. Most participants were **delegates (`r delegate_n`, `r delegate_pct`%)**, while **`r presenter_n` (`r presenter_pct`%) were presenters**.
 
 ## 2. Construct a table summarizing the frequency and percentage of symptoms reported by participants who experienced at least one symptom. Arrange the symptoms in descending order of frequency. Show your calculations in the analysis output. (5 marks)
 
@@ -138,32 +135,30 @@ n_symp = df %>% filter(if_any(all_of(symptoms), ~ .x == 1)) %>% nrow()
 
 # Summarise frequency and percentage of each symptom among symptomatic participants
 qn2_df = df %>%
-    filter(if_any(all_of(symptoms), ~ .x == 1)) %>%
-    summarise(across(all_of(symptoms), ~ sum(.x == 1, na.rm = TRUE))) %>%
-    pivot_longer(
-        everything(),
-        names_to = "symptom",
-        values_to = "frequency") %>%
-    mutate(percentage = round(100 * frequency / n_symp, 1)) %>%
-    arrange(desc(frequency))
+  filter(if_any(all_of(symptoms), ~ .x == 1)) %>%
+  summarise(across(all_of(symptoms), ~ sum(.x == 1, na.rm = TRUE))) %>%
+  pivot_longer(
+    everything(),
+    names_to = "symptom",
+    values_to = "frequency") %>%
+  mutate(percentage = round(100 * frequency / n_symp, 1)) %>%
+  arrange(desc(frequency))
 
 # Create table for presentation
 qn2_table = qn2_df %>%
-    mutate(
-        symptom = case_when(
-            symptom == "diarr" ~ "Diarrhoea",
-            symptom == "abdopain" ~ "Abdominal pain",
-            symptom == "fever" ~ "Fever",
-            symptom == "vomit" ~ "Vomiting",
-            symptom == "appetite" ~ "Loss of appetite",
-            symptom == "nausea" ~ "Nausea",
-            TRUE ~ symptom
-        )
-    ) %>%
-    rename(
-        Symptom = symptom,
-        Frequency = frequency,
-        `Percentage (%)` = percentage
+  mutate(
+    symptom = case_when(
+      symptom == "diarr" ~ "Diarrhoea",
+      symptom == "abdopain" ~ "Abdominal pain",
+      symptom == "fever" ~ "Fever",
+      symptom == "vomit" ~ "Vomiting",
+      symptom == "appetite" ~ "Loss of appetite",
+      symptom == "nausea" ~ "Nausea",
+      TRUE ~ symptom)) %>%
+  rename(
+    Symptom = symptom,
+    Frequency = frequency,
+    `Percentage (%)` = percentage
     )
 
 flextable(qn2_table) %>% 
@@ -172,7 +167,7 @@ flextable(qn2_table) %>%
     font(fontname = "Times New Roman", part = "all") %>%
     fontsize(size = 12, part = "all") %>%
     set_caption(paste0("Symptomatic participants (n = ", n_symp, ")")) %>%
-    autofit() 
+    autofit()
 ```
 
 <br>
@@ -185,7 +180,7 @@ symp_rate = n_symp / n_total         # Proportion of symptomatics
 symp_pct = round(100 * symp_rate, 1) # Proportion in %
 ```
 
-The proportion of participants reporting at least one symptom was **`r symp_pct`% (`r n_symp` out of `r n_total`)**, which greatly exceeds the background rate of foodborne illness in Singapore (<1%). Therefore, this finding strongly suggests that an outbreak has occurred among conference participants.
+The proportion of participants reporting at least one symptom was **`r symp_pct`% (`r n_symp` out of `r n_total`)**, which is substantially higher than the expected background rate of foodborne illness in Singapore (<1%). This finding strongly suggests that the observed illness is unlikely to be due to normal variation and is consistent with an outbreak among conference participants.
 
 \newpage
 
@@ -193,17 +188,17 @@ The proportion of participants reporting at least one symptom was **`r symp_pct`
 
 ## 4. Propose a suitable case definition for this outbreak. (6 marks)
 
-[To be completed]
+A case was defined as any person who attended the public health conference at the downtown Singapore convention centre on 3 September 2025 (person and place) and developed acute gastrointestinal illness within 48 hours after attending the event (time), characterised by symptoms such as diarrhoea, abdominal pain, fever, or vomiting (clinical criteria). The selected clinical symptoms were informed by the findings from Question 2, where the most frequently reported symptoms among symptomatic participants were included, while less common symptoms were excluded. These symptoms are consistent with typical manifestations of foodborne illness and were chosen to ensure a sensitive case definition in the early stage of the outbreak investigation, allowing identification of most potential cases while further information is being gathered.
 
 ## 5. What are the benefits and challenges of using a case definition that is too broad or too narrow during an outbreak investigation? How might this impact the outcome of the investigation? (4 marks)
 
-[To be completed]
+A broad case definition has high sensitivity and allows identification of a large number of potential cases, including mild or atypical presentations. This is particularly useful in the early stages of an outbreak to ensure that most true cases are captured and the full extent of the outbreak is not missed. However, it may also include individuals whose illness is unrelated to the outbreak (false positives), reducing specificity. This can dilute the observed association between exposure and illness, making it more difficult to identify the true source of the outbreak. In contrast, a narrow case definition has high specificity and is more likely to include only true outbreak-related cases, reducing false positives. However, it may exclude mild or atypical cases (false negatives), leading to an underestimation of the outbreak size. A smaller number of identified cases can reduce statistical power and limit the ability to detect significant associations, potentially hindering identification of the source.
 
 ## 6. Describe two strategies public health investigators can implement to effectively balance between rapid outbreak response and accurate determination of the outbreak source when using a working case definition. (4 marks)
 
-[To be completed]
+One strategy is to use an **iterative working case definition**. Investigators may initially adopt a broad case definition to enable rapid identification of potential cases and early outbreak response. As more information becomes available, including clinical patterns, exposure histories, and laboratory results, the case definition can be progressively refined to improve specificity. This approach balances the need for speed with increasing diagnostic accuracy over time. A second strategy is to conduct **parallel investigation work streams**. While one team implements immediate control measures based on preliminary findings, another team conducts detailed epidemiological and laboratory investigations to identify the true source of the outbreak. This ensures that timely public health action is taken without compromising the accuracy of the investigation.
 
-## 7. Using the pre-determined case definition, calculate the attack rate among the conference  attendees. Show your calculation and present your final answer as a percentage. (2 marks)
+## 7. Using the pre-determined case definition, calculate the attack rate among the conference attendees. Show your calculation and present your final answer as a percentage. (2 marks)
 
 ```{r}
 n_total = nrow(df)                          # Total number of participants
@@ -212,8 +207,7 @@ attack_rate = n_cases / n_total             # Attack rate
 attack_pct = round(100 * attack_rate, 1)    # Attack rate in %
 ```
 
-Number of cases = `r n_cases`  
-Total number of attendees = `r n_total`  
+Number of cases = `r n_cases`. Total number of attendees = `r n_total`.   
 Attack rate = (`r n_cases` / `r n_total`) × 100 = **`r attack_pct`%**
 
 ## 8. What were the minimum, median and maximum durations of illness (in days) among the cases?  Show your calculations in the analysis output. (3 marks)
@@ -221,8 +215,8 @@ Attack rate = (`r n_cases` / `r n_total`) × 100 = **`r attack_pct`%**
 ```{r}
 # Subset to cases only
 qn8_df = df %>%
-    filter(case == 1) %>%
-    mutate(duration_days = as.numeric(illness_end_time - illness_start_time, units = "days"))
+  filter(case == 1) %>%
+  mutate(duration_days = as.numeric(illness_end_time - illness_start_time, units = "days"))
 
 # Calculate summary statistics for duration of illness
 dur_min = min(qn8_df$duration_days, na.rm = TRUE)     # Minimum duration
@@ -239,8 +233,8 @@ Maximum duration = **`r sprintf("%.2f", dur_max)` days**
 ```{r}
 # Subset to cases only
 qn9_df = df %>%
-    filter(case == 1) %>%
-    mutate(incubation_days = as.numeric(illness_start_time - ate_start, units = "days"))
+  filter(case == 1) %>%
+  mutate(incubation_days = as.numeric(illness_start_time - ate_start, units = "days"))
 
 inc_min = min(qn9_df$incubation_days, na.rm = T)     # Minimum incubation
 inc_med = median(qn9_df$incubation_days, na.rm = T)  # Median incubation
@@ -257,44 +251,74 @@ Maximum incubation period = **`r sprintf("%.2f", inc_max)` days**
 
 ## 10. Construct an epidemic curve using the dates and times of illness onset among the cases. Include your graph below. Ensure it has a title, labelled axes, and appropriate time intervals. Show how the graph was generated in the analysis output.  (12 marks)
 
-```{r dpi = 300}
-# Define time interval for grouping onset times
-hour_interval = 6
+```{r, dpi=200, fig.width=6, fig.height=4}
+# Define time interval
+hour_interval = 4
 
-# Aggregate number of cases by time interval of illness onset
+# Create full sequence of intervals
+full_time_seq = seq(
+  as.POSIXct("2025-09-03 08:00:00"),
+  as.POSIXct("2025-09-05 00:00:00"),
+  by = paste0(hour_interval, " hours"))
+
+# Aggregate cases into dynamic bins
 df_epi_count = df %>%
-    filter(case == 1, !is.na(illness_start_time)) %>%
-    mutate(
-        onset_bin = floor_date(illness_start_time, unit = "day") +
-            hours(hour_interval) * floor(hour(illness_start_time) / hour_interval),
-        onset_end = onset_bin + hours(hour_interval),
-        interval_label = paste0(
-            format(onset_bin, "%b %d\n%H:%M")," - ",
-            format(onset_end, "%H:%M"))) %>%
-    count(onset_bin, interval_label)
+  filter(case == 1) %>%
+  mutate(
+    onset_bin = floor_date(
+      illness_start_time,
+      unit = paste0(hour_interval, " hours"))) %>%
+  count(onset_bin)
 
-# Plot epidemic curve
-epi_curve = ggplot(df_epi_count, aes(x = interval_label, y = n)) +
-    geom_col(fill = "skyblue", color = "black") +
-    labs(
-        title = "Epidemic Curve of Illness Onset",
-        subtitle = paste0(
-            "Among ",
-            sum(df$case == 1, na.rm = TRUE),
-            " conference cases, grouped into 6-hour intervals"
-        ),
-        x = "Time Interval of Illness Onset",
-        y = "Number of Cases"
-    ) +
-    theme_bw()
+# Ensure all bins exist
+df_epi_full = data.frame(onset_bin = full_time_seq) %>%
+  left_join(df_epi_count, by = "onset_bin") %>%
+  mutate(
+    n = ifelse(is.na(n), 0, n),
+    onset_end = onset_bin + hours(hour_interval),
+    interval_label = format(onset_bin, "%b %d\n%H:%M"))
 
-# Export and display curve
+# Find exposure bin automatically (Sep 3 ~12:00)
+exposure_time = as.POSIXct("2025-09-03 12:00:00")
+exposure_index = which.min(abs(df_epi_full$onset_bin - exposure_time))
+
+# Plot
+epi_curve = ggplot(
+  data = df_epi_full,
+  aes(x = interval_label, y = n)) +
+  geom_col(fill = "skyblue", color = "black") +
+  labs(
+    title = "Epidemic Curve of Illness Onset",
+    subtitle = paste0(
+      "Among ",
+      sum(df$case == 1, na.rm = TRUE),
+      " conference cases, grouped into ",
+      hour_interval, "-hour intervals"),
+    x = paste0("Illness onset time (", hour_interval, "-hour intervals, start time shown)"),
+    y = "Number of Cases") +
+  annotate(
+    "segment",
+    x = exposure_index, xend = exposure_index,
+    y = max(df_epi_full$n) - 10, yend = 1,
+    colour = "red",
+    arrow = arrow(length = unit(0.3, "cm"))) +
+  annotate(
+    "text",
+    x = exposure_index,
+    y = max(df_epi_full$n) - 5,
+    label = "Likely exposure period\n(ate between 12:00 - 12:45)",
+    color = "red",
+    size = 3, vjust = 1.1) +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 8))
+
+# Display
 epi_curve
 ```
 
 ## 11. Based on your epidemic curve, what kind of outbreak does it suggest? Give reasons for your answer. (3 marks)
 
-[To be completed]
+The epidemic curve suggests a point source outbreak. There is a sharp increase in cases from 00:00 to 08:00 on 4 September, followed by a gradual decline thereafter, forming a single peak. The cases are concentrated within a short time period, indicating a common exposure occurring at approximately the same time. Although there is a slight fluctuation in the declining phase, the overall pattern remains consistent with a single peak. This pattern is not consistent with continuous or intermittent common source outbreaks, as cases are not spread over a prolonged period or multiple distinct peaks. It is also unlikely to be a propagated outbreak, as there are no successive waves of cases separated by an incubation period.
 
 \newpage
 
@@ -312,78 +336,69 @@ foods = df %>%
 
 # Reshape dataset to long format with exposure status for each food item
 qn12_long = df %>%
-    mutate(row_id = row_number()) %>%
-    select(row_id, case, all_of(foods)) %>%
-    mutate(across(all_of(foods), ~ ifelse(.x %in% c(0, 1), .x, NA))) %>%
-    pivot_longer(
-        cols = all_of(foods),
-        names_to = "food",
-        values_to = "exposed")
+  mutate(row_id = row_number()) %>%
+  select(row_id, case, all_of(foods)) %>%
+  mutate(across(all_of(foods), ~ ifelse(.x %in% c(0, 1), .x, NA))) %>%
+  pivot_longer(cols = all_of(foods), names_to = "food", values_to = "exposed")
 
 # Calculate number of participants with unknown exposure for each food item
 qn12_unknown = qn12_long %>%
-    group_by(food) %>%
-    summarise(
-        unknown_n = sum(is.na(exposed)),
-        .groups = "drop")
+  group_by(food) %>%
+  summarise(unknown_n = sum(is.na(exposed)), .groups = "drop")
 
 # Compute attack rates among exposed and unexposed groups
 qn12_rates = qn12_long %>%
-    filter(!is.na(exposed)) %>%
-    group_by(food, exposed) %>%
-    summarise(
-        ill = sum(case == 1),
-        total = n(),
-        attack_rate = 100 * ill / total,
-        .groups = "drop")
+  filter(!is.na(exposed)) %>%
+  group_by(food, exposed) %>%
+  summarise(
+    ill = sum(case == 1),
+    total = n(),
+    attack_rate = 100 * ill / total,
+    .groups = "drop")
 
 # Reshape results to wide format and combine with unknown exposure counts
 qn12_wide = qn12_rates %>%
-    left_join(qn12_unknown, by = "food") %>%
-    mutate(group = ifelse(exposed == 1, "Exposed", "Unexposed")) %>%
-    select(food, group, ill, total, attack_rate, unknown_n) %>%
-    pivot_wider(names_from = group, values_from = c(ill, total, attack_rate))
+  left_join(qn12_unknown, by = "food") %>%
+  mutate(group = ifelse(exposed == 1, "Exposed", "Unexposed")) %>%
+  select(food, group, ill, total, attack_rate, unknown_n) %>%
+  pivot_wider(names_from = group, values_from = c(ill, total, attack_rate))
 
 # Create table for presentation
 qn12_table = qn12_wide %>%
-    mutate(
-        attack_rate_Exposed = round(attack_rate_Exposed, 1),
-        attack_rate_Unexposed = round(attack_rate_Unexposed, 1),
-        food = stringr::str_replace_all(food, "_", " "),
-        food = stringr::str_to_title(food)
-        ) %>%
-    select(
-        Food = food,
-        Ill_Exp = ill_Exposed,
-        Total_Exp = total_Exposed,
-        AR_Exp = attack_rate_Exposed,
-        Ill_Unexp = ill_Unexposed,
-        Total_Unexp = total_Unexposed,
-        AR_Unexp = attack_rate_Unexposed,
-        Unknown = unknown_n
-    )
+  mutate(
+    attack_rate_Exposed = round(attack_rate_Exposed, 1),
+    attack_rate_Unexposed = round(attack_rate_Unexposed, 1),
+    food = stringr::str_replace_all(food, "_", " "),
+    food = stringr::str_to_title(food)) %>%
+  select(
+    Food = food,
+    Ill_Exp = ill_Exposed,
+    Total_Exp = total_Exposed,
+    AR_Exp = attack_rate_Exposed,
+    Ill_Unexp = ill_Unexposed,
+    Total_Unexp = total_Unexposed,
+    AR_Unexp = attack_rate_Unexposed,
+    Unknown = unknown_n)
 
 flextable(qn12_table) %>%
-    set_header_labels(
-        Ill_Exp = "Ill",
-        Total_Exp = "Total",
-        AR_Exp = "Attack Rate (%)",
-        Ill_Unexp = "Ill",
-        Total_Unexp = "Total",
-        AR_Unexp = "Attack Rate (%)"
-    ) %>%
-    add_header_row(
-        values = c("", "Exposed", "Unexposed", ""),
-        colwidths = c(1, 3, 3, 1)
-    ) %>%
-    vline(j = 1, border = officer::fp_border(width = 1)) %>% 
-    vline(j = 4, border = officer::fp_border(width = 1)) %>%
-    vline(j = 7, border = officer::fp_border(width = 1)) %>%
-    bg(i = seq(2, nrow(qn12_table), by = 2), bg = "#F9F9F9", part = "body") %>%
-    bold(part = "header") %>%
-    font(fontname = "Times New Roman", part = "all") %>%
-    fontsize(size = 12, part = "all") %>%
-    autofit()
+  set_header_labels(
+    Ill_Exp = "Ill",
+    Total_Exp = "Total",
+    AR_Exp = "Attack Rate (%)",
+    Ill_Unexp = "Ill",
+    Total_Unexp = "Total",
+    AR_Unexp = "Attack Rate (%)") %>%
+  add_header_row(
+    values = c("", "Exposed", "Unexposed", ""),
+    colwidths = c(1, 3, 3, 1)) %>%
+  vline(j = 1, border = officer::fp_border(width = 1)) %>% 
+  vline(j = 4, border = officer::fp_border(width = 1)) %>%
+  vline(j = 7, border = officer::fp_border(width = 1)) %>%
+  bg(i = seq(2, nrow(qn12_table), by = 2), bg = "#F9F9F9", part = "body") %>%
+  bold(part = "header") %>%
+  font(fontname = "Times New Roman", part = "all") %>%
+  fontsize(size = 12, part = "all") %>%
+  autofit()
 ```
 
 <br>
@@ -401,49 +416,47 @@ z = qnorm(1 - alpha/2)
 
 # Calculate attack rates, relative risks, and 95% confidence intervals for each food item
 qn12_df = qn12_wide %>%
-    mutate(
-        ar_exp = ill_Exposed / total_Exposed,
-        ar_unexp = ill_Unexposed / total_Unexposed,
-        rr = ar_exp / ar_unexp,
-        se_log_rr = sqrt(
-            (1 / ill_Exposed) - (1 / total_Exposed) +
-            (1 / ill_Unexposed) - (1 / total_Unexposed)),
+  mutate(
+    ar_exp = ill_Exposed / total_Exposed,
+    ar_unexp = ill_Unexposed / total_Unexposed,
+    rr = ar_exp / ar_unexp,
+    se_log_rr = sqrt(
+        (1 / ill_Exposed) - (1 / total_Exposed) +
+        (1 / ill_Unexposed) - (1 / total_Unexposed)),
     rr_lower = exp(log(rr) - z * se_log_rr),
     rr_upper = exp(log(rr) + z * se_log_rr))
 
 # Create table for presentation
-qn13_table <- qn12_df %>%
-    mutate(
-        food = stringr::str_replace_all(food, "_", " "),
-        food = stringr::str_to_title(food),
-        ar_exp = sprintf("%.1f", ar_exp * 100),
-        ar_unexp = sprintf("%.1f", ar_unexp * 100),
-        rr = sprintf("%.2f", rr),
-        rr_lower = sprintf("%.2f", rr_lower),
-        rr_upper = sprintf("%.2f", rr_upper),
-        ci = paste0(rr_lower, " – ", rr_upper)
-    ) %>%
+qn13_table = qn12_df %>%
+  mutate(
+    food = stringr::str_replace_all(food, "_", " "),
+    food = stringr::str_to_title(food),
+    ar_exp = sprintf("%.1f", ar_exp * 100),
+    ar_unexp = sprintf("%.1f", ar_unexp * 100),
+    rr = sprintf("%.2f", rr),
+    rr_lower = sprintf("%.2f", rr_lower),
+    rr_upper = sprintf("%.2f", rr_upper),
+    ci = paste0(rr_lower, " – ", rr_upper)) %>%
     select(
-        Food = food,
-        `Attack Rate (%)\n(Exposed)` = ar_exp,
-        `Attack Rate (%)\n(Unexposed)` = ar_unexp,
-        `Relative Risk` = rr,
-        `95% CI` = ci
-    )
+      Food = food,
+      `Attack Rate (%)\n(Exposed)` = ar_exp,
+      `Attack Rate (%)\n(Unexposed)` = ar_unexp,
+      `Relative Risk` = rr,
+      `95% CI` = ci)
 
 flextable(qn13_table) %>% 
-    bg(i = seq(2, nrow(qn13_table), by = 2), bg = "#F9F9F9", part = "body") %>%
-    bold(part = "header") %>%
-    font(fontname = "Times New Roman", part = "all") %>%
-    fontsize(size = 12, part = "all") %>%
-    autofit()
+  bg(i = seq(2, nrow(qn13_table), by = 2), bg = "#F9F9F9", part = "body") %>%
+  bold(part = "header") %>%
+  font(fontname = "Times New Roman", part = "all") %>%
+  fontsize(size = 12, part = "all") %>%
+  autofit()
 ```
 
 <br>
 
 ## 14. Write a paragraph summarizing the results of your statistical analysis. Describe which food item was most strongly associated with illness in this outbreak, and present the statistical evidence supporting this conclusion. Your interpretation should be based on the findings from Questions 12 and 13. (4 marks)
 
-[To be completed]
+The results identified 8 food items with relative risks greater than 1, suggesting a potential association with illness. However, only a subset showed statistical significance, as indicated by 95% confidence intervals that did not include 1 (mashed potatoes, strawberry compote, tiramisu). Among these, tiramisu demonstrated the strongest effect size, with the highest attack rate among exposed individuals (75.4%) and the largest relative risk (3.42). Therefore, tiramisu showed the strongest statistically significant association with illness in this outbreak.
 
 \newpage
 
@@ -451,15 +464,39 @@ flextable(qn13_table) %>%
 
 ## 15. Describe two types of bias that could have affected the outbreak investigation. For each, explain how it might impact the results and suggest a way to minimize the impact. (6 marks)
 
-[To be completed]
+Assuming that all conference participants were included in the dataset, selection bias is unlikely. Therefore, two forms of information bias are considered.
+
+<br>
+
+**Recall bias** can occur when cases and non-cases differ in their ability to accurately remember past exposures. Participants who became ill may be more likely to recall and over-report foods they consumed, while non-cases may forget or under-report. This may lead to an overestimation of the association between certain food items and illness. To minimise recall bias, investigators should administer standardised questionnaires as soon as possible after the event and, where feasible, verify responses using objective records such as catering logs.
+
+<br>
+
+**Misclassification bias** can occur when participants are incorrectly classified as cases or non-cases based on the case definition. If the case definition is not precise, individuals with mild or unrelated symptoms may be misclassified. This can weaken the observed associations and obscure the true relationship between exposure and illness. To minimise this, investigators should use a clear and consistent case definition, refine it as more information becomes available, and assess the robustness of findings by applying alternative case definitions.
 
 ## 16. Identify a potential confounder in this outbreak investigation. Explain how you would assess confounding and describe methods to control for confounding during data analysis. (7 marks)
 
-[To be completed]
+A potential confounder in this outbreak investigation is meal timing (e.g. early vs late consumption). For a variable to act as a confounder, it must be associated with both the exposure and the outcome and not lie on the causal pathway. Meal timing may be associated with exposure, as food items such as tiramisu may have been served in batches, resulting in differences in the likelihood of consuming a contaminated portion. It may also be associated with the outcome, as individuals who consumed food from a more contaminated batch would have a higher risk of illness. As meal timing is not caused by food consumption, it is not on the causal pathway. Therefore, it could distort the observed association between tiramisu consumption and illness.
+
+<br>
+
+To assess confounding, stratified analysis can be performed by meal timing. First, it should be established that the variable is associated with both exposure and outcome and is unevenly distributed between exposed and unexposed groups. The association between tiramisu consumption and illness is then examined within each stratum, and the stratum-specific relative risks are compared with the crude relative risk. If the stratum-specific estimates are similar to each other but differ meaningfully from the crude estimate (e.g. by more than 10%), this suggests confounding. Confounding may either strengthen or weaken the observed association.
+
+<br>
+
+To control for confounding during data analysis, stratification or multivariable adjustment can be used. Stratification provides an adjusted estimate by combining stratum-specific measures of association. Alternatively, multivariable log-binomial regression can be used to adjust for multiple confounders simultaneously by including them as covariates in the model. This allows estimation of adjusted relative risks while holding other variables constant.
 
 ## 17. If this outbreak had been investigated using a case-control study instead of a retrospective cohort study, how would the analysis of food exposure differ? List one advantage and one limitation of each study design in the context of this outbreak. (4 marks)
 
-[To be completed]
+If this outbreak had been investigated using a case-control study, participants would be selected based on disease status rather than exposure. Individuals who developed gastrointestinal illness (cases) would be compared to those who did not (controls), and their prior consumption of specific food items would be assessed retrospectively. The measure of association would be the odds ratio, which estimates the odds of exposure among cases relative to controls, rather than the relative risk calculated in a retrospective cohort study.
+
+<br>
+
+An advantage of the retrospective cohort study in this outbreak is that it allows direct calculation of relative risk, which is more intuitive for identifying the likely source of disease. However, a limitation is that it requires complete or near-complete data on all participants, which can take a lot of time and resources.
+
+<br>
+
+An advantage of a case-control study is that it is more efficient when full cohort data is unavailable, as only a subset of participants needs to be studied. However, a limitation is that it cannot directly estimate relative risk and instead relies on the odds ratio, which may be less intuitive and can overestimate the strength of association when the outcome is common.
 
 \newpage
 
@@ -467,8 +504,36 @@ flextable(qn13_table) %>%
 
 ## 18. Based on the information that you have compiled from your analysis, which micro-organism do you think is most likely to be responsible for this outbreak? Give 3 reasons, with explanation for your answer. (10 marks)
 
-[To be completed]
+Based on the evidence obtained from this investigation, Salmonella spp. is the most likely causative micro-organism.
+
+<br>
+
+**1. Incubation period consistent with Salmonella**  
+The incubation period among cases ranged from 14 to 34 hours (median: 24 hours), which falls within the established range for Salmonella spp. (6 - 48 hours). This is inconsistent with organisms such as Staphylococcus aureus (1 - 6 hours) and Bacillus cereus (emetic type, <6 hours), which typically have much shorter incubation periods. Although norovirus has a partially overlapping incubation range, it more commonly presents with vomiting as the predominant symptom, whereas diarrhoea was the most frequently reported symptom in this outbreak.
+<br>
+
+**2. Symptom profile matches Salmonella spp.**  
+The dominant symptoms were diarrhoea (90.4%), abdominal pain (78.8%), and fever (58.9%). This combination is characteristic of non-typhoidal Salmonella infection. The presence of fever in more than half of cases helps distinguish it from Staphylococcus aureus and Bacillus cereus, which do not typically cause fever.
+
+<br>
+
+**3. Illness duration and food vehicle**  
+Tiramisu was the most strongly implicated food (RR = 3.42, 95% CI: 2.43 - 4.81). Tiramisu commonly contains raw or lightly cooked eggs and dairy, which are well established vehicles for Salmonella spp. The duration of illness (median 3 days, range 1.7 - 6.8 days) is also consistent with Salmonella infection, which typically lasts several days.
 
 ## 19. Based on your investigation findings, suggest two immediate control measures to prevent further transmission of the outbreak. Identify indicators you would monitor to assess whether the control measures are effective. (4 marks)
 
-[To be completed]
+**1. Immediate recall and destruction of remaining tiramisu and implicated food**  
+All remaining tiramisu and potentially contaminated food items from the conference should be immediately recalled and destroyed. Conference attendees should be notified not to consume any leftover food taken home. The catering company should be notified and directed to cease distribution of any leftover foods. Food handlers who prepared the tiramisu and other implicated foods should be tested and temporarily excluded from food handling duties.  
+
+<br>
+
+**Monitoring indicators:** No new cases of gastroenteritis identified among conference attendees within one incubation period following the recall, and confirmation that all implicated food has been successfully removed or discarded.
+
+<br>
+
+**2. Medical management and case follow-up**  
+All conference attendees should be contacted and advised to seek medical attention if presenting with symptoms. A health advisory should be issued through official channels describing the incident, symptoms, and when to seek medical care. A list of all cases should be maintained and updated daily to monitor outbreak trajectory. Overseas attendees should be notified via relevant health authorities where appropriate.  
+
+<br>
+
+**Monitoring indicators:** Daily case count (declining trajectory indicates successful control), number of hospitalisations due to severe gastroenteritis among attendees, and secondary cases reported in close contacts of primary cases.
