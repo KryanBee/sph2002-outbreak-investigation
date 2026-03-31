@@ -29,14 +29,13 @@ lapply(packages, library, character.only = TRUE)
 
 ```{r}
 front_table = tibble(
-  `No.` = 1:6, 
+  `No.` = 1:5, 
   `Student MATRIC Numbers` = c(
     "A0192401R",
-    "",
-    "",
-    "",
-    "",
-    ""
+    "A0307782X",
+    "A0338097R",
+    "A0306846X",
+    "A0324662E"
     )
   )
 
@@ -188,7 +187,8 @@ The proportion of participants reporting at least one symptom was **`r symp_pct`
 
 ## 4. Propose a suitable case definition for this outbreak. (6 marks)
 
-A case was defined as any person who attended the public health conference at the downtown Singapore convention centre on 3 September 2025 (person and place) and developed acute gastrointestinal illness within 48 hours after attending the event (time), characterised by symptoms such as diarrhoea, abdominal pain, fever, or vomiting (clinical criteria). The selected clinical symptoms were informed by the findings from Question 2, where the most frequently reported symptoms among symptomatic participants were included, while less common symptoms were excluded. These symptoms are consistent with typical manifestations of foodborne illness and were chosen to ensure a sensitive case definition in the early stage of the outbreak investigation, allowing identification of most potential cases while further information is being gathered.
+A case was defined as any attendee who attended the public health conference at the downtown Singapore convention centre on 3 September 2025 (person and place) and developed acute gastrointestinal illness within 48 hours after attending the event (time), characterised by symptoms such as diarrhoea, abdominal pain, fever, or vomiting (clinical criteria). The selected clinical symptoms were informed by the findings from Question 2, where the most frequently reported symptoms among symptomatic participants were included, while less common symptoms were excluded. These symptoms are consistent with typical manifestations of foodborne illness and were chosen to ensure a sensitive case definition in the early stage of the outbreak investigation, allowing identification of most potential cases while further information is being gathered.
+
 
 ## 5. What are the benefits and challenges of using a case definition that is too broad or too narrow during an outbreak investigation? How might this impact the outcome of the investigation? (4 marks)
 
@@ -476,7 +476,7 @@ Assuming that all conference participants were included in the dataset, selectio
 
 ## 16. Identify a potential confounder in this outbreak investigation. Explain how you would assess confounding and describe methods to control for confounding during data analysis. (7 marks)
 
-A potential confounder in this outbreak investigation is meal timing (e.g. early vs late consumption). For a variable to act as a confounder, it must be associated with both the exposure and the outcome and not lie on the causal pathway. Meal timing may be associated with exposure, as food items such as tiramisu may have been served in batches, resulting in differences in the likelihood of consuming a contaminated portion. It may also be associated with the outcome, as individuals who consumed food from a more contaminated batch would have a higher risk of illness. As meal timing is not caused by food consumption, it is not on the causal pathway. Therefore, it could distort the observed association between tiramisu consumption and illness.
+A potential confounder in this outbreak investigation is meal timing ("ate_start"). For a variable to act as a confounder, it must be associated with both the exposure and the outcome and not lie on the causal pathway. Meal timing may be associated with exposure, as food items such as tiramisu may have been served in batches, resulting in differences in the likelihood of consuming a contaminated portion. It may also be associated with the outcome, as individuals who consumed food from a more contaminated batch would have a higher risk of illness. As meal timing is not caused by food consumption, it is not on the causal pathway. Therefore, it could distort the observed association between tiramisu consumption and illness.
 
 <br>
 
@@ -492,11 +492,11 @@ If this outbreak had been investigated using a case-control study, participants 
 
 <br>
 
-An advantage of the retrospective cohort study in this outbreak is that it allows direct calculation of relative risk, which is more intuitive for identifying the likely source of disease. However, a limitation is that it requires complete or near-complete data on all participants, which can take a lot of time and resources.
+An advantage of the retrospective cohort study in this outbreak is that it allows direct calculation of relative risk, which is more intuitive for identifying the likely source of disease. However, a limitation is that it requires collecting detailed exposure data (consumption of each food item) from the entire cohort, which may be difficult to obtain reliably.
 
 <br>
 
-An advantage of a case-control study is that it is more efficient when full cohort data is unavailable, as only a subset of participants needs to be studied. However, a limitation is that it cannot directly estimate relative risk and instead relies on the odds ratio, which may be less intuitive and can overestimate the strength of association when the outcome is common.
+An advantage of a case-control study is that it is more efficient when full cohort data is unavailable, as it focuses only on identified cases and a subset of controls. This allows investigators to efficiently assess multiple food exposures by directly asking cases/controls about what they consumed, without requiring complete data on the entire population. However, a limitation is that it cannot directly estimate relative risk and instead relies on the odds ratio, which may be less intuitive and can substantially overestimate the strength of association when the outcome is common (49.8% in this outbreak).
 
 \newpage
 
@@ -504,12 +504,13 @@ An advantage of a case-control study is that it is more efficient when full coho
 
 ## 18. Based on the information that you have compiled from your analysis, which micro-organism do you think is most likely to be responsible for this outbreak? Give 3 reasons, with explanation for your answer. (10 marks)
 
-Based on the evidence obtained from this investigation, Salmonella spp. is the most likely causative micro-organism.
+Based on the evidence obtained from this investigation, Salmonella (non-typhi) spp. is the most likely causative micro-organism.
 
 <br>
 
 **1. Incubation period consistent with Salmonella**  
 The incubation period among cases ranged from 14 to 34 hours (median: 24 hours), which falls within the established range for Salmonella spp. (6 - 48 hours). This is inconsistent with organisms such as Staphylococcus aureus (1 - 6 hours) and Bacillus cereus (emetic type, <6 hours), which typically have much shorter incubation periods. Although norovirus has a partially overlapping incubation range, it more commonly presents with vomiting as the predominant symptom, whereas diarrhoea was the most frequently reported symptom in this outbreak.
+
 <br>
 
 **2. Symptom profile matches Salmonella spp.**  
